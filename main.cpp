@@ -72,7 +72,7 @@ template <class... Ts> void println(const Ts &...xs) {
     print_one(xs...);
     cout << '\n';
 }
-template <class T> void printAll(const V<T> t) {
+template <class T> void printAll(const V<T> &t) {
     rep(i, t.size()) cout << t[i] << endl;
 }
 inline void yes(const bool c = true) { cout << (c ? "Yes" : "No") << '\n'; }
@@ -112,6 +112,8 @@ template <class T> V<T> prefix_sum_1d(const V<T> &vec) {
 // . ...     ...
 template <class T> V<V<T>> prefix_sum_2d(const V<V<T>> &grid) {
     const int n = static_cast<int>(grid.size());
+    if (n == 0) return V<V<T>>(1, V<T>(1, T{}));
+
     const int m = static_cast<int>(grid[0].size());
     V<V<T>> ps(n + 1, V<T>(m + 1, T{}));
 
@@ -124,28 +126,28 @@ template <class T> V<V<T>> prefix_sum_2d(const V<V<T>> &grid) {
 }
 // 累積MAX
 // A[0], A[1], A[2], ..., A[N - 1]
-// -INF, L[0], L[1], L[2], ..., L[N - 1], -INF
-// -INF, R[0], R[1], R[2], ..., R[N - 1], -INF
+// lowest, L[0], L[1], L[2], ..., L[N - 1], lowest
+// lowest, R[0], R[1], R[2], ..., R[N - 1], lowest
 template <class T> struct Prefix_Max_Info {
     V<T> L, R;
 };
 template <class T> Prefix_Max_Info<T> prefix_max_1d(const V<T> &vec) {
     const int n = static_cast<int>(vec.size());
     Prefix_Max_Info<T> info;
-    info.L.assign(n + 2, -1 * INF);
-    info.R.assign(n + 2, -1 * INF);
+    info.L.assign(n + 2, numeric_limits<T>::lowest());
+    info.R.assign(n + 2, numeric_limits<T>::lowest());
     rep(i, n) info.L[i + 1] = max(info.L[i], vec[i]);
     rrep(i, n) info.R[i + 1] = max(info.R[i + 2], vec[i]);
     return info;
 }
 // ============== 二分探索 ==============
 // return -> 0-indexed
-template <class T, class F> int binary_search(const V<F> &vec, T x) {
+template <class T, class F> int binary_search_index(const V<F> &vec, T x) {
     int pos = lower_bound(all(vec), x) - vec.begin();
-    if (pos <= static_cast<int>(vec.size()) && vec[pos] == x) return pos;
+    if (pos < static_cast<int>(vec.size()) && vec[pos] == x) return pos;
     return -1;
 }
-template <class T> int first_less_index(const V<T>& vec, int l, int r, T x) {
+template <class T> int lower_bound_index(const V<T>& vec, int l, int r, T x) {
     auto it = lower_bound(vec.begin() + l, vec.begin() + r + 1, x);
     if (it == vec.begin() + r + 1) return -1;
     return static_cast<int>(it - vec.begin());
@@ -156,15 +158,14 @@ template <class T> int last_less_index(const V<T>& vec, int l, int r, T x) {
     --it;
     return static_cast<int>(it - vec.begin());
 }
-template <class T> int first_greater_index(const V<T>& vec, int l, int r, T x) {
+template <class T> int upper_bound_index(const V<T>& vec, int l, int r, T x) {
     auto it = upper_bound(vec.begin() + l, vec.begin() + r + 1, x);
     if (it == vec.begin() + r + 1) return -1;
     return static_cast<int>(it - vec.begin());
 }
 template <class T>
 int last_greater_index(const V<T>& vec, int l, int r, const T& x) {
-    auto it = upper_bound(vec.begin() + l, vec.begin() + r + 1, x);
-    if (it == vec.begin() + r + 1) return -1;
+    if (upper_bound(vec.begin() + l, vec.begin() + r + 1, x) == vec.begin() + r + 1) return -1;
     return r;
 }
 template <class T, class F> T binary_search_min(T ok, T ng, F pred) {

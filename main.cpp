@@ -531,7 +531,7 @@ Dijkstra_Info dijkstra(const Graph &graph, int s) {
 #endif
 
 void solve() {
-
+    
 }
 
 int main() {

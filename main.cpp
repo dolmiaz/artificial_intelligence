@@ -19,6 +19,7 @@ using pll = pair<ll, ll>;
 constexpr ld PI = 3.141592653589793238L;
 constexpr int INF = 1073741823;
 constexpr ll INF_L = (1LL << 60);
+constexpr double INF_D = 1e100;
 const string ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const string abc = "abcdefghijklmnopqrstuvwxyz";
 constexpr ll modNum = 998244353;
@@ -530,8 +531,183 @@ Dijkstra_Info dijkstra(const Graph &graph, int s) {
 #define MULTI_TEST_CASES 0
 #endif
 
+constexpr double  r_normal = -0.04;
+constexpr double  r_jewelry = 1.0;
+constexpr double  r_goal_exit = 10.0;
+constexpr double  r_danger_exit = -10.0;
+
+constexpr double t_normal = 0.8;
+constexpr double t_error = 0.2;
+
+
+struct Grid {
+    int N{}, M{};
+    V<string> grid;
+
+    V<V<double>> value;
+};
+
+Grid read_grid() {
+    Grid g;
+    cin >> g.N >> g.M;
+
+    g.grid.resize(g.N);
+
+    g.value.assign(g.N, V<double>(g.M, 0));
+
+    rep(i, g.N) cin >> g.grid[i];
+
+    return g;
+}
+
+// a方向に確率1で動いた時に動けるかを返す
+bool can_move(const Grid &g, const int i, const int j, const int a) {
+    if (g.grid[i][j] == '#') return false;
+    int i_ = i + DR4[a];
+    int j_ = j + DC4[a];
+
+    if (i_ < 0 || i_ >= g.N || j_ < 0 || j_ >= g.M) return false;
+    if (g.grid[i_][j_] == '#') return false;
+
+    return true;
+}
+
+// a方向に確率1で動かす
+pair<int, int> move_to(const Grid &g, const int i, const int j, const int a) {
+    if (!can_move(g, i, j, a)) return {i,j};
+    return {i + DR4[a], j + DC4[a]};
+}
+
+// (i, j)からa方向に遷移した時の価値を返す
+double calc_action_value(const Grid &g, const int i, const int j, const int a) {
+    double res = 0.0;
+
+    rep(k, 4) {
+        if (k == 2) continue;
+
+        const int a_ = (a + k) % 4;
+        const auto [i_, j_] = move_to(g, i, j, a_);
+        if (k == 0) {
+            res += t_normal * g.value[i_][j_];
+        } else {
+            res += (t_error / 2.0) * g.value[i_][j_];
+        }
+    }
+
+    return res + r_normal;
+}
+
+// aを全方向試して最大値とaを返す
+pair<int, double> calc_next_value(const Grid &g, const int i, const int j) {
+    int max_a = 0;
+    double max_value = -INF_D;
+
+    rep(a, 4) {
+        double cur_val = calc_action_value(g, i, j, a);
+
+        if (cur_val > max_value) {
+            max_a = a;
+            max_value = cur_val;
+        }
+    }
+
+    return {max_a, max_value};
+}
+
+// V1を求める関数
+void initialize_value(Grid &g) {
+    rep(i, g.N) rep(j, g.M) {
+        char c = g.grid[i][j];
+
+        if (c == '#') continue;
+
+        if (c == '.' || c == 'S') {
+            g.value[i][j] = r_normal;
+        } else if (c == 'J') {
+            g.value[i][j] = r_jewelry;
+        } else if (c == 'G') {
+            g.value[i][j] = r_goal_exit;
+        } else if (c == 'D') {
+            g.value[i][j] = r_danger_exit;
+        } else {
+            cerr << "Invalid input: " << c << " at (" << i <<"," << j << ")\n";
+            exit(1);
+        }
+    }
+}
+
+void update_value(Grid &g) {
+    auto next_value = g.value;
+    rep(i, g.N) rep(j, g.M) {
+        const char c = g.grid[i][j];
+
+        if (c == '#' || c == 'J' || c == 'D' || c == 'G') continue;
+
+        next_value[i][j] = calc_next_value(g, i, j).second;
+    }
+
+    g.value = next_value;
+}
+
+void print_all(const Grid &g) {
+    rep(i, g.N) rep(j, g.M) {
+        cout << fixed << setprecision(5) << setw(10) << g.value[i][j] << " ";
+        if (j == g.M - 1) cout << "\n";
+    }
+}
+
 void solve() {
-    
+    Grid g = read_grid();
+    initialize_value(g);
+
+    int iter = 1;
+
+    cout << "V" << iter << "\n";
+    print_all(g);
+
+    while (true) {
+        cout << "\ncommand: ";
+
+        string cmd;
+        cin >> cmd;
+
+        if (cmd == "q" || cmd == "Q") {
+            break;
+        }
+
+        if (cmd == "p" || cmd == "P") {
+            cout << "V" << iter << "\n";
+            print_all(g);
+            continue;
+        }
+
+        if (cmd == "a" || cmd == "A") {
+            int cnt;
+            cin >> cnt;
+
+            rep(_, cnt) {
+                update_value(g);
+                iter++;
+
+                cout << "V" << iter << "\n";
+                print_all(g);
+                cout << "\n";
+            }
+
+            continue;
+        }
+
+        // 数字だけ入力された場合: その回数だけ進めて、最後だけ表示
+        int cnt = stoi(cmd);
+
+        rep(_, cnt) {
+            update_value(g);
+            iter++;
+        }
+
+        cout << "V" << iter << "\n";
+        print_all(g);
+    }
 }
 
 int main() {
